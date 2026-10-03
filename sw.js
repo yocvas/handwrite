@@ -1,5 +1,5 @@
 // Offline support: cache the app shell, and fonts on first use.
-const CACHE = 'kotvim-v2';
+const CACHE = 'kotvim-v3';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/data.js', 'js/store.js', 'js/pad.js', 'js/strokes.js', 'js/minigame.js', 'js/app.js',

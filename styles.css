@@ -378,3 +378,8 @@ svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width:
   .big-letter { font-size: 48px; }
   .speak-btn { width: 54px; height: 54px; font-size: 26px; }
 }
+
+/* parent settings: Hebrew voice picker */
+.voice-pick { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.voice-pick select { max-width: 220px; font: inherit; font-size: 15px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.voice-pick .tool { width: 44px; height: 44px; font-size: 20px; box-shadow: none; background: #efefef; }

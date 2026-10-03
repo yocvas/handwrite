@@ -156,8 +156,16 @@ const sfx = {
   oops: () => tone([392, 330], 0.15, 'triangle'),
 };
 
+// Prefer the parent's choice, then natural/enhanced voices (Edge "Hila/Avri Online (Natural)",
+// iOS "Carmit (Enhanced)") over the robotic compact defaults.
 let heVoice = null;
-function pickVoice() { heVoice = speechSynthesis.getVoices().find(v => /^(he|iw)/i.test(v.lang)) || null; }
+const hebrewVoices = () => speechSynthesis.getVoices().filter(v => /^(he|iw)/i.test(v.lang));
+const voiceRank = v => (/natural|neural/i.test(v.name) ? 4 : 0) + (/enhanced|premium|משופר|מתקדם/i.test(v.name) ? 4 : 0) +
+  (/online/i.test(v.name) ? 2 : 0) + (v.localService === false ? 1 : 0);
+function pickVoice() {
+  const vs = hebrewVoices();
+  heVoice = vs.find(v => v.name === state.settings.voiceName) || vs.sort((a, b) => voiceRank(b) - voiceRank(a))[0] || null;
+}
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
 function speak(text, pitch = 1) {
@@ -166,7 +174,7 @@ function speak(text, pitch = 1) {
   const go = () => {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'he-IL'; if (heVoice) u.voice = heVoice;
-    u.rate = 0.85; u.pitch = pitch;
+    u.rate = 0.9; u.pitch = pitch;
     ss.speak(u);
   };
   ss.resume();
@@ -837,6 +845,16 @@ function sheetParentGate(next) {
   };
 }
 
+function voicePicker() {
+  if (!('speechSynthesis' in window)) return '';
+  const vs = hebrewVoices().sort((a, b) => voiceRank(b) - voiceRank(a));
+  const note = 'iPad: הגדרות › נגישות › תוכן מוקרא › קולות › עברית › Carmit (משופר) — להוריד ולבחור כאן';
+  if (!vs.length) return `<div class="switch-row"><div><div>קול עברי</div><div class="muted small">לא נמצא קול עברי. ${note}</div></div></div>`;
+  return `<div class="switch-row"><div><div>קול עברי</div><div class="muted small">${note}</div></div>
+    <div class="voice-pick"><select id="voiceSel">${vs.map(v => `<option value="${esc(v.name)}" ${heVoice && v.name === heVoice.name ? 'selected' : ''}>${esc(v.name.replace(/^Microsofts+/, "").replace(/s*-s*Hebrew.*$/, ""))}${voiceRank(v) >= 4 ? " ⭐" : ""}</option>`).join('')}</select>
+    <button class="tool" data-say="שָׁלוֹם! בּוֹאוּ נִכְתֹּב אֶת הָאוֹת אָלֶף" aria-label="בדיקה">🔊</button></div></div>`;
+}
+
 function sheetSettings() {
   const sw = (key, label, note) => `
     <label class="switch-row"><div><div>${label}</div>${note ? `<div class="muted small">${note}</div>` : ''}</div>
@@ -847,7 +865,8 @@ function sheetSettings() {
   openSheet(`<h2>הגדרות הורים</h2>
     ${sw('penOnly', 'כתיבה רק עם Apple Pencil', 'מונע סימונים מכף היד. נדלק אוטומטית כשהעט מזוהה.')}
     ${sw('unlockAll', 'פתיחת כל השלבים', 'בלי לחכות להתקדמות')}
-    ${sw('voice', 'הקראה בקול', 'iPad: הגדרות › נגישות › תוכן מוקרא › קולות › עברית')}
+    ${sw('voice', 'הקראה בקול', 'כל ההוראות נאמרות בקול')}
+    ${voicePicker()}
     ${sw('sound', 'צלילים')}
     <h3>התקדמות</h3>${prog}
     ${weak ? `<div class="prog-row"><span>אותיות לתרגול</span><span class="weak">${weak}</span></div>` : ''}
@@ -936,6 +955,10 @@ document.addEventListener('pointerup', e => {
 });
 
 document.addEventListener('change', e => {
+  if (e.target.id === 'voiceSel') {
+    state.settings.voiceName = e.target.value; save(); pickVoice();
+    return speak('שָׁלוֹם! בּוֹאוּ נִכְתֹּב אֶת הָאוֹת אָלֶף');
+  }
   const k = e.target.dataset.set;
   if (!k) return;
   state.settings[k] = e.target.checked; save();
