@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="כותבים">
+  <meta name="theme-color" content="#ffffff">
+  <title>כותבים ✏️</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@700&family=Rubik:wght@400;500;600;700&family=Varela+Round&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="logo">כותבים</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btnActivity" aria-label="פעילות">
+          <svg viewBox="0 0 24 24"><path d="M16.8 3.5c-1.9 0-3.6 1-4.8 2.6C10.8 4.5 9.1 3.5 7.2 3.5 4 3.5 1.8 6 1.8 9.2c0 5.4 7.4 10.1 10.2 11.3 2.8-1.2 10.2-5.9 10.2-11.3 0-3.2-2.2-5.7-5.4-5.7z"/></svg>
+          <span class="dot hidden" id="activityDot"></span>
+        </button>
+      </div>
+    </header>
+
+    <main id="view"></main>
+
+    <nav class="tabbar">
+      <button class="tab active" data-tab="home" aria-label="בית">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></svg>
+      </button>
+      <button class="tab" data-tab="explore" aria-label="גלה">
+        <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></svg>
+      </button>
+      <button class="tab" data-tab="create" aria-label="שיעור הבא">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 8v8M8 12h8"/></svg>
+      </button>
+      <button class="tab" data-tab="draw" aria-label="ציור חופשי">
+        <svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>
+      </button>
+      <button class="tab" data-tab="profile" aria-label="פרופיל">
+        <span class="tab-avatar" id="tabAvatar">🦄</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Story-style writing screen -->
+  <section id="story" class="story hidden" aria-modal="true">
+    <div class="story-progress" id="storyProgress"></div>
+    <div class="story-head">
+      <div class="story-who">
+        <div class="ring small"><div class="ring-inner" id="storyIcon">אב</div></div>
+        <div class="story-meta">
+          <span class="story-title" id="storyTitle">אותיות</span>
+          <span class="story-sub" id="storySub"></span>
+          <span class="story-level" id="storyLevel"></span>
+        </div>
+      </div>
+      <div class="story-nav">
+        <button class="round-btn" id="btnPrev" aria-label="הקודם"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="round-btn" id="btnNext" aria-label="הבא"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button class="round-btn" id="btnClose" aria-label="סגור"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="prompt" id="prompt">
+      <div class="prompt-emoji" id="promptEmoji">🦁</div>
+      <div class="prompt-text" id="promptText"></div>
+      <button class="speak-btn hidden" id="btnDemo" aria-label="איך כותבים">▶️</button>
+      <button class="speak-btn" id="btnSpeak" aria-label="השמע">🔊</button>
+    </div>
+
+    <div class="paper" id="paper">
+      <div class="paper-inner" id="paperInner">
+        <canvas id="guideCanvas"></canvas>
+        <canvas id="inkCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="story-tools">
+      <div class="colors" id="colors"></div>
+      <div class="tool-btns">
+        <button class="tool" id="btnUndo" aria-label="בטל">↩︎</button>
+        <button class="tool" id="btnClear" aria-label="נקה">🧽</button>
+        <button class="send" id="btnDone"><span class="send-av" id="doneAv">🦄</span>סיימתי<span class="send-go">✓</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Result overlay -->
+  <section id="result" class="result hidden">
+    <div class="result-card">
+      <div class="stars" id="resultStars"></div>
+      <div class="result-title" id="resultTitle"></div>
+      <img class="result-img" id="resultImg" alt="" draggable="false">
+      <div class="result-sub" id="resultSub"></div>
+      <div class="result-bonus" id="resultBonus"></div>
+      <button class="btn bonus wide hidden" id="btnBonus">🎁 משחק בונוס!</button>
+      <div class="result-btns">
+        <button class="btn ghost" id="btnRetry"></button>
+        <button class="btn primary" id="btnResultNext"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom sheet for settings / activity / post -->
+  <div id="sheetBackdrop" class="sheet-backdrop hidden"></div>
+  <section id="sheet" class="sheet hidden">
+    <div class="sheet-handle"></div>
+    <div id="sheetBody"></div>
+  </section>
+
+  <div id="burst" class="burst"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pad.js"></script>
+  <script src="js/strokes.js"></script>
+  <script src="js/minigame.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

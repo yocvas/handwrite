@@ -1,0 +1,7 @@
+# dev-only scoring harness (shares the app's storage if published)
+tests/
+# test harness leftovers
+_*
+# OS junk
+Thumbs.db
+.DS_Store
