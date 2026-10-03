@@ -845,13 +845,16 @@ function sheetParentGate(next) {
   };
 }
 
+// "Microsoft הילה Online (Natural) - Hebrew (Israel)" → "הילה Online (Natural)"
+const voiceLabel = v => v.name.replace(/^Microsoft\s+/, '').replace(/\s*-\s*Hebrew.*$/, '');
+
 function voicePicker() {
   if (!('speechSynthesis' in window)) return '';
   const vs = hebrewVoices().sort((a, b) => voiceRank(b) - voiceRank(a));
   const note = 'iPad: הגדרות › נגישות › תוכן מוקרא › קולות › עברית › Carmit (משופר) — להוריד ולבחור כאן';
   if (!vs.length) return `<div class="switch-row"><div><div>קול עברי</div><div class="muted small">לא נמצא קול עברי. ${note}</div></div></div>`;
   return `<div class="switch-row"><div><div>קול עברי</div><div class="muted small">${note}</div></div>
-    <div class="voice-pick"><select id="voiceSel">${vs.map(v => `<option value="${esc(v.name)}" ${heVoice && v.name === heVoice.name ? 'selected' : ''}>${esc(v.name.replace(/^Microsofts+/, "").replace(/s*-s*Hebrew.*$/, ""))}${voiceRank(v) >= 4 ? " ⭐" : ""}</option>`).join('')}</select>
+    <div class="voice-pick"><select id="voiceSel">${vs.map(v => `<option value="${esc(v.name)}" ${heVoice && v.name === heVoice.name ? 'selected' : ''}>${esc(voiceLabel(v))}${voiceRank(v) >= 4 ? " ⭐" : ""}</option>`).join('')}</select>
     <button class="tool" data-say="שָׁלוֹם! בּוֹאוּ נִכְתֹּב אֶת הָאוֹת אָלֶף" aria-label="בדיקה">🔊</button></div></div>`;
 }
 
