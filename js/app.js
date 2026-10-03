@@ -6,6 +6,8 @@ const FREE = { id: 'free', name: 'ציור חופשי', icon: '🎨', grad: ['#4
 const BONUS = { id: 'bonus', name: 'בונוס', icon: '🎁', grad: ['#20b26b', '#4f5bd5'] };
 const BONUS_EVERY = 5;                               // successful lessons per bonus game
 const DIFF_ICONS = ['🌱', '🌿', '🌳', '🚀', '👑'];  // adaptive difficulty 0..4
+// Everything spoken carries nikud: unvocalized Hebrew is ambiguous for TTS (יפה = yafe / yafa)
+const LEVEL_SAY = ['אוֹתִיּוֹת', 'מִלִּים', 'מִשְׁפָּטִים', 'פִּסְקָאוֹת'];
 const TILE_G = [['#feda75', '#fa7e1e'], ['#fa7e1e', '#d62976'], ['#d62976', '#962fbf'], ['#962fbf', '#4f5bd5'], ['#4f5bd5', '#22c1c3'], ['#20b26b', '#c3e83d']];
 
 // ---------------- state ----------------
@@ -170,6 +172,9 @@ if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged 
 
 function speak(text, pitch = 1) {
   if (!text || !state.settings.voice || !('speechSynthesis' in window)) return;
+  // iOS reads emoji and arrows aloud by name ("smiling face…")
+  text = String(text).replace(/[\p{Extended_Pictographic}←-⇿■-◿️‍]/gu, '').trim();
+  if (!text) return;
   const ss = speechSynthesis;
   const go = () => {
     const u = new SpeechSynthesisUtterance(text);
@@ -238,7 +243,7 @@ const imgTag = (p, cls = '') =>
   p.img.startsWith('data:') ? `<img class="${cls}" src="${p.img}" alt="" draggable="false">`
     : `<img class="${cls}" data-img="${p.img}" alt="" draggable="false">`;
 
-async function addPost({ level, key, text, emoji, stars: s, canvas }) {
+async function addPost({ level, key, text, say, emoji, stars: s, canvas }) {
   const id = Date.now().toString(36) + rand(1000);
   let img = id;
   try {
@@ -249,10 +254,10 @@ async function addPost({ level, key, text, emoji, stars: s, canvas }) {
   }
   const fans = [...FRIENDS.keys()].sort(() => Math.random() - 0.5);
   // praise the effort, not the score: same amount of love for every post
-  const comments = fans.slice(0, 2 + rand(2)).map(f => ({ f, text: pick(COMMENTS[s || 2]) }));
-  if (level === 'letters') comments.unshift({ f: fans[3], text: `האות ${text} יצאה יפה! ✨` });
-  else if (level === 'words' || level === 'sentences') comments.unshift({ f: fans[3], text: `קראתי: "${text}" 📖` });
-  const post = { id, ts: Date.now(), level, key, text, emoji, stars: s, img, likes: 6 + rand(6), liked: false, comments };
+  const comments = fans.slice(0, 2 + rand(2)).map(f => { const t = pick(COMMENTS[s || 2]); return { f, text: t, say: COMMENT_SAY[t] }; });
+  if (level === 'letters') comments.unshift({ f: fans[3], text: `האות ${text} יצאה יפה! ✨`, say: `${say} יָצְאָה יָפָה!` });
+  else if (level === 'words' || level === 'sentences') comments.unshift({ f: fans[3], text: `קראתי: "${text}" 📖`, say: `קָרָאתִי: ${say}` });
+  const post = { id, ts: Date.now(), level, key, text, say, emoji, stars: s, img, likes: 6 + rand(6), liked: false, comments };
   state.posts.unshift(post);
   save();
   return post;
@@ -357,7 +362,7 @@ function suggestedCard() {
 
 const HEART = '<svg viewBox="0 0 24 24"><path d="M16.8 3.5c-1.9 0-3.6 1-4.8 2.6C10.8 4.5 9.1 3.5 7.2 3.5 4 3.5 1.8 6 1.8 9.2c0 5.4 7.4 10.1 10.2 11.3 2.8-1.2 10.2-5.9 10.2-11.3 0-3.2-2.2-5.7-5.4-5.7z"/></svg>';
 
-const friendSay = c => `data-say="${esc(c.text)}" data-pitch="${(0.8 + (c.f % 5) * 0.2).toFixed(1)}"`;
+const friendSay = c => `data-say="${esc(c.say || COMMENT_SAY[c.text] || c.text)}" data-pitch="${(0.8 + (c.f % 5) * 0.2).toFixed(1)}"`;
 
 function postHTML(p, { hideComments = false } = {}) {
   const L = levelMeta(p.level);
@@ -379,7 +384,7 @@ function postHTML(p, { hideComments = false } = {}) {
       <button class="icon-btn" data-act="post" data-id="${p.id}" aria-label="תגובות">
         <svg viewBox="0 0 24 24"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.6-4.6A8.5 8.5 0 1 1 20.5 11.5z"/></svg><span class="cnt">${p.comments.length}</span>
       </button>
-      <button class="icon-btn" data-act="speak" data-say="${esc(p.text)}" aria-label="הקראה">
+      <button class="icon-btn" data-act="speak" data-say="${esc(p.say || p.text)}" aria-label="הקראה">
         <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
       </button>
       <span class="spacer"></span>
@@ -405,7 +410,7 @@ function viewHome() {
 
 function viewExplore() {
   const chips = [-1, 0, 1, 2, 3].map(l => `
-    <button class="chip ${exploreFilter === l ? 'on' : ''}" data-act="filter" data-l="${l}" data-say="${l < 0 ? 'הכל' : LEVELS[l].name}">
+    <button class="chip ${exploreFilter === l ? 'on' : ''}" data-act="filter" data-l="${l}" data-say="${l < 0 ? 'הַכֹּל' : LEVEL_SAY[l]}">
       ${l < 0 ? 'הכל' : LEVELS[l].icon + ' ' + LEVELS[l].name}</button>`).join('');
   let tiles = '', n = 0;
   LEVELS.forEach((L, l) => {
@@ -478,8 +483,8 @@ function openLevel(l) {
 function lockedToast(l) {
   sfx.oops();
   const left = needed(l - 1) - doneCount(l - 1);
-  if (!unlocked(l - 1)) return toast(`🔒 ${LEVELS[l].name}`, `קודם ${LEVELS[l - 1].name}`);
-  toast(`🔒 עוד ${left} ב${LEVELS[l - 1].name} ← ${LEVELS[l].icon}`, `עוד ${left} ${LEVELS[l - 1].name}, ונפתח את ה${LEVELS[l].name}!`);
+  if (!unlocked(l - 1)) return toast(`🔒 ${LEVELS[l].name}`, `קֹדֶם ${LEVEL_SAY[l - 1]}`);
+  toast(`🔒 עוד ${left} ב${LEVELS[l - 1].name} ← ${LEVELS[l].icon}`, `עוֹד ${left} ${LEVEL_SAY[l - 1]}, וְנִפְתַּח אֶת הַ${LEVEL_SAY[l]}!`);
 }
 
 const pagesOf = (l, i) => l === 3 ? sentencesOf(item(l, i).t) : [item(l, i).t];
@@ -549,7 +554,7 @@ function setupPad() {
 }
 
 function sayPrompt() {
-  if (!cur || cur.free) return speak('ציור חופשי');
+  if (!cur || cur.free) return speak('צִיּוּר חָפְשִׁי');
   speak(sayOf(cur.l, cur.i, cur.page));
 }
 
@@ -596,9 +601,9 @@ function stopCoach() { if (coach) { coach.cancel(); coach = null; } }
 // Live coaching: check each stroke as soon as the pencil lifts
 // (partial mode tolerates a half-drawn last stroke, pen lifts and merged strokes)
 const LIVE_HINT = {
-  reversed: 'הפוך! מתחילים מהנקודה הירוקה, בכיוון החץ',
-  order: 'רגע! קודם הקו עם הנקודה הירוקה הזאת',
-  wrongStart: 'מתחילים מהנקודה הירוקה',
+  reversed: 'הָפוּךְ! מַתְחִילִים מֵהַנְּקֻדָּה הַיְּרֻקָּה, בְּכִוּוּן הַחֵץ',
+  order: 'רֶגַע! קֹדֶם הַקַּו עִם הַנְּקֻדָּה הַיְּרֻקָּה הַזֹּאת',
+  wrongStart: 'מַתְחִילִים מֵהַנְּקֻדָּה הַיְּרֻקָּה',
 };
 pad.onStroke = () => {
   if (!hasStrokes() || typeof checkStrokeOrder !== 'function') return;
@@ -636,7 +641,7 @@ async function finish() {
   if (pad.isEmpty()) {
     sfx.oops();
     $('#paper').classList.remove('shake'); void $('#paper').offsetWidth; $('#paper').classList.add('shake');
-    speak('קודם כותבים עם העט');
+    speak('קֹדֶם כּוֹתְבִים עִם הָעֵט');
     return;
   }
   stopDemo(); stopCoach();
@@ -645,7 +650,7 @@ async function finish() {
   const snap = pad.snapshot();
 
   if (c.free) {
-    const post = await addPost({ level: 'free', key: 'free', text: 'ציור חופשי', emoji: '🎨', stars: 0, canvas: snap });
+    const post = await addPost({ level: 'free', key: 'free', text: 'ציור חופשי', say: 'צִיּוּר חָפְשִׁי', emoji: '🎨', stars: 0, canvas: snap });
     return showResult({ s: 3, free: true, canvas: snap, post });
   }
 
@@ -668,7 +673,7 @@ async function finish() {
     // paragraph: next page; the post is made from all pages at the end
     c.pages[c.page] = { canvas: snap, s };
     save(); sfx.ok();
-    toast(`${starStr(s)} ← עמוד ${c.page + 2}`, 'יפה! עכשיו השורה הבאה');
+    toast(`${starStr(s)} ← עמוד ${c.page + 2}`, 'יָפֶה! עַכְשָׁו הַשּׁוּרָה הַבָּאָה');
     return openStory(c.l, c.i, c.page + 1);
   }
   if (s > 0) {
@@ -680,7 +685,7 @@ async function finish() {
     const p = state.progress[LEVELS[c.l].id] = state.progress[LEVELS[c.l].id] || {};
     p[it.t] = Math.max(p[it.t] || 0, s);
     state.bonus = Math.min(BONUS_EVERY, state.bonus + 1);
-    post = await addPost({ level: LEVELS[c.l].id, key: it.t, text: it.t, emoji: it.emoji, stars: s, canvas });
+    post = await addPost({ level: LEVELS[c.l].id, key: it.t, text: it.t, say: c.l === 0 ? `הָאוֹת ${it.say}` : it.say || it.t, emoji: it.emoji, stars: s, canvas });
   }
   save();
   if (order && !order.ok) {
@@ -691,12 +696,12 @@ async function finish() {
 }
 
 const TITLES = ['כמעט!','יפה מאוד! 😊', 'כל הכבוד! 👏', 'מושלם! 🤩'];
-const SPOKEN = ['', 'כוכב אחד! יפה מאוד!', 'שני כוכבים! כל הכבוד!', 'שלושה כוכבים! מושלם!'];
+const SPOKEN = ['', 'כּוֹכָב אֶחָד! יָפֶה מְאוֹד!', 'שְׁנֵי כּוֹכָבִים! כָּל הַכָּבוֹד!', 'שְׁלוֹשָׁה כּוֹכָבִים! מֻשְׁלָם!'];
 const ORDER_HINT = {
-  reversed: ['🔄 כיוון הקו', 'כמעט! כותבים את הקו מהנקודה הירוקה, בכיוון החץ'],
-  order: ['🔢 סדר הקווים', 'כמעט! קודם הקו עם המספר אחת, ואחר כך הבא'],
-  wrongStart: ['🟢 מתחילים מהנקודה', 'כמעט! מתחילים מהנקודה הירוקה'],
-  missing: ['✏️ חסר קו', 'כמעט! חסר עוד קו אחד'],
+  reversed: ['🔄 כיוון הקו', 'כִּמְעַט! כּוֹתְבִים אֶת הַקַּו מֵהַנְּקֻדָּה הַיְּרֻקָּה, בְּכִוּוּן הַחֵץ'],
+  order: ['🔢 סדר הקווים', 'כִּמְעַט! קֹדֶם הַקַּו עִם הַמִּסְפָּר אַחַת, וְאַחַר כָּךְ הַבָּא'],
+  wrongStart: ['🟢 מתחילים מהנקודה', 'כִּמְעַט! מַתְחִילִים מֵהַנְּקֻדָּה הַיְּרֻקָּה'],
+  missing: ['✏️ חסר קו', 'כִּמְעַט! חָסֵר עוֹד קַו אֶחָד'],
 };
 
 function showResult({ s, free, res, order, canvas, post, wasUnlocked, levelStep }) {
@@ -707,13 +712,13 @@ function showResult({ s, free, res, order, canvas, post, wasUnlocked, levelStep 
   $('#resultImg').src = canvas.toDataURL('image/jpeg', 0.7);
   const orderIssue = order && !order.ok && ORDER_HINT[(order.issues[0] || {}).problem];
   let spoken;
-  if (free) { $('#resultSub').textContent = 'פורסם בפיד ❤️'; spoken = 'איזה ציור יפה!'; }
+  if (free) { $('#resultSub').textContent = 'פורסם בפיד ❤️'; spoken = 'אֵיזֶה צִיּוּר יָפֶה!'; }
   else if (s > 0) { $('#resultSub').textContent = 'פורסם בפיד ❤️'; spoken = SPOKEN[s]; }
   else if (orderIssue) { $('#resultSub').textContent = orderIssue[0]; spoken = orderIssue[1]; }
   else {
     const missing = res && res.coverage < 0.5;
     $('#resultSub').textContent = missing ? 'חסר עוד קצת ✏️' : 'לאט לאט, על הקו האפור ✏️';
-    spoken = missing ? 'כמעט! חסר עוד קצת. בואו נראה איך כותבים, וננסה שוב' : 'כמעט! לאט לאט, נשארים על הקו האפור';
+    spoken = missing ? 'כִּמְעַט! חָסֵר עוֹד קְצָת. בּוֹאוּ נִרְאֶה אֵיךְ כּוֹתְבִים, וּנְנַסֶּה שׁוּב' : 'כִּמְעַט! לְאַט לְאַט, נִשְׁאָרִים עַל הַקַּו הָאָפֹר';
   }
   // bonus progress: 5 gifts
   const ready = state.bonus >= BONUS_EVERY;
@@ -740,12 +745,12 @@ function showResult({ s, free, res, order, canvas, post, wasUnlocked, levelStep 
 
   let delay = 1800;
   if (levelStep > 0) {
-    setTimeout(() => toast(`${DIFF_ICONS[Math.round(diff(LEVELS[c.l].id))]} עולים רמה!`, 'עולים רמה!'), delay);
+    setTimeout(() => toast(`${DIFF_ICONS[Math.round(diff(LEVELS[c.l].id))]} עולים רמה!`, 'עוֹלִים רָמָה!'), delay);
     delay += 2400;
   }
-  if (ready) { setTimeout(() => { toast('🎁 משחק בונוס!', 'יש משחק בונוס!'); sfx.win(); }, delay); delay += 2400; }
+  if (ready) { setTimeout(() => { toast('🎁 משחק בונוס!', 'יֵשׁ מִשְׂחַק בּוֹנוּס!'); sfx.win(); }, delay); delay += 2400; }
   if (wasUnlocked) LEVELS.forEach((L, l) => {
-    if (!wasUnlocked[l] && unlocked(l)) setTimeout(() => { toast(`🎉 ${L.icon} ${L.name}`, `נפתח שלב חדש: ${L.name}!`); sfx.win(); }, delay);
+    if (!wasUnlocked[l] && unlocked(l)) setTimeout(() => { toast(`🎉 ${L.icon} ${L.name}`, `נִפְתַּח שָׁלָב חָדָשׁ: ${LEVEL_SAY[l]}!`); sfx.win(); }, delay);
   });
 }
 
@@ -753,7 +758,7 @@ function showResult({ s, free, res, order, canvas, post, wasUnlocked, levelStep 
 
 function openBonus() {
   const left = BONUS_EVERY - state.bonus;
-  if (left > 0) return toast(`🎁 ${'●'.repeat(state.bonus)}${'○'.repeat(left)}`, `עוד ${left} שיעורים, ומקבלים משחק בונוס!`);
+  if (left > 0) return toast(`🎁 ${'●'.repeat(state.bonus)}${'○'.repeat(left)}`, `עוֹד ${left} שִׁעוּרִים, וּמְקַבְּלִים מִשְׂחַק בּוֹנוּס!`);
   if (typeof MiniGame === 'undefined') return;
   state.bonus = 0;
   state.gameMode = state.gameMode === 'fishing' ? 'hunting' : 'fishing';
@@ -772,7 +777,8 @@ function openBonus() {
       if (hits > 0) {
         const fish = mode === 'fishing';
         const text = fish ? `תפסתי ${hits === 1 ? 'דג אחד' : hits + ' דגים'}!` : `תפסתי ${hits === 1 ? 'פרפר אחד' : hits + ' פרפרים'}!`;
-        await addPost({ level: 'bonus', key: mode, text, emoji: fish ? '🎣' : '🦋', stars: 0, canvas: cardCanvas(fish ? '🐟' : '🦋', `${hits} ×`, BONUS.grad) });
+        const say = fish ? `תָּפַסְתִּי ${hits === 1 ? 'דָּג אֶחָד' : hits + ' דָּגִים'}!` : `תָּפַסְתִּי ${hits === 1 ? 'פַּרְפַּר אֶחָד' : hits + ' פַּרְפָּרִים'}!`;
+        await addPost({ level: 'bonus', key: mode, text, say, emoji: fish ? '🎣' : '🦋', stars: 0, canvas: cardCanvas(fish ? '🐟' : '🦋', `${hits} ×`, BONUS.grad) });
       }
       render();
     },
