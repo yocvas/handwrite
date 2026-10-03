@@ -485,7 +485,8 @@ function lockedToast(l) {
 const pagesOf = (l, i) => l === 3 ? sentencesOf(item(l, i).t) : [item(l, i).t];
 function sayOf(l, i, page) {
   const it = item(l, i);
-  if (l === 0) return `${it.say}. ${it.say}, כמו ${it.wordSay || it.word}`;
+  // "הָאוֹת" gives the voice context, so it reads letter names (בית = bet, not bayit)
+  if (l === 0) return `הָאוֹת ${it.say}. ${it.say}, כְּמוֹ ${it.wordSay || it.word}`;
   if (l === 3) return sentencesOf(it.say || it.t)[page] || pagesOf(l, i)[page];
   return it.say || it.t;
 }

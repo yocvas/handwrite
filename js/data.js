@@ -4,7 +4,9 @@
 //
 // Fields:
 //   t        – unvocalized text the child traces (כתיב מלא, as taught in Israeli schools)
-//   say      – fully vocalized text for TTS (he-IL). For letters: the letter's name.
+//   say      – fully vocalized text for TTS (he-IL). For letters: the letter's name, spelled so
+//              voices can't confuse it with a common word (הֵי not הא, פֵּה not פא); the app always
+//              says it after "הָאוֹת" so natural voices read בית as bet (not bayit), אלף as aleph (not elef).
 //   word     – (letters only) example word; finals' example words END with that letter
 //   wordSay  – (letters only, optional) vocalized example word for TTS
 //   emoji    – picture shown with the item
@@ -14,7 +16,7 @@ const LETTERS = [
   { t: 'ב', say: 'בֵּית',  word: 'בננה',     wordSay: 'בַּנָּנָה',    emoji: '🍌' },
   { t: 'ג', say: 'גִּימֶל', word: 'גמל',      wordSay: 'גָּמָל',      emoji: '🐪' },
   { t: 'ד', say: 'דָּלֶת', word: 'דג',       wordSay: 'דָּג',        emoji: '🐟' },
-  { t: 'ה', say: 'הֵא',    word: 'היפופוטם', wordSay: 'הִיפּוֹפּוֹטָם', emoji: '🦛' },
+  { t: 'ה', say: 'הֵי',    word: 'היפופוטם', wordSay: 'הִיפּוֹפּוֹטָם', emoji: '🦛' },
   { t: 'ו', say: 'וָו',    word: 'ורד',      wordSay: 'וֶרֶד',       emoji: '🌹' },
   { t: 'ז', say: 'זַיִן',  word: 'זברה',     wordSay: 'זֶבְּרָה',     emoji: '🦓' },
   { t: 'ח', say: 'חֵית',   word: 'חתול',     wordSay: 'חָתוּל',      emoji: '🐱' },
@@ -26,7 +28,7 @@ const LETTERS = [
   { t: 'נ', say: 'נוּן',   word: 'נמר',      wordSay: 'נָמֵר',       emoji: '🐆' },
   { t: 'ס', say: 'סָמֶךְ', word: 'סוס',      wordSay: 'סוּס',        emoji: '🐴' },
   { t: 'ע', say: 'עַיִן',  word: 'עוגה',     wordSay: 'עוּגָה',      emoji: '🎂' },
-  { t: 'פ', say: 'פֵּא',   word: 'פיל',      wordSay: 'פִּיל',       emoji: '🐘' },
+  { t: 'פ', say: 'פֵּה',   word: 'פיל',      wordSay: 'פִּיל',       emoji: '🐘' },
   { t: 'צ', say: 'צָדִי',  word: 'צב',       wordSay: 'צָב',         emoji: '🐢' },
   { t: 'ק', say: 'קוּף',   word: 'קשת',      wordSay: 'קֶשֶׁת',      emoji: '🌈' },
   { t: 'ר', say: 'רֵישׁ',  word: 'רכבת',     wordSay: 'רַכֶּבֶת',     emoji: '🚂' },
@@ -35,7 +37,7 @@ const LETTERS = [
   { t: 'ך', say: 'כַּף סוֹפִית',  word: 'מלך',  wordSay: 'מֶלֶךְ', emoji: '👑' },
   { t: 'ם', say: 'מֵם סוֹפִית',   word: 'ים',   wordSay: 'יָם',    emoji: '🌊' },
   { t: 'ן', say: 'נוּן סוֹפִית',  word: 'בלון', wordSay: 'בָּלוֹן', emoji: '🎈' },
-  { t: 'ף', say: 'פֵּא סוֹפִית',  word: 'קוף',  wordSay: 'קוֹף',   emoji: '🐒' },
+  { t: 'ף', say: 'פֵּה סוֹפִית',  word: 'קוף',  wordSay: 'קוֹף',   emoji: '🐒' },
   { t: 'ץ', say: 'צָדִי סוֹפִית', word: 'עץ',   wordSay: 'עֵץ',    emoji: '🌳' },
 ];
 
